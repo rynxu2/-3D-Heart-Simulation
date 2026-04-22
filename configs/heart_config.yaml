@@ -1,0 +1,44 @@
+# Heart Simulation Configuration
+
+heart_models:
+  anatomy:
+    model_path: src/web/static/heart_anatomy.glb
+    description: "Anatomical heart with 4 chambers"
+    source: sketchfab
+    animation_type: morph_target
+    
+  medical:
+    model_path: data/medical_3d/
+    description: "Heart from CT/MRI segmentation"
+    segmentation_tool: totalsegmentator
+    export_format: glb
+
+simulation:
+  fps: 60
+  systole_ratio: 0.33  # contraction = 1/3 of cycle
+  diastole_ratio: 0.67  # relaxation = 2/3 of cycle
+  
+  contraction_scale:
+    min: 0.85  # max contraction
+    max: 1.0   # fully relaxed
+  
+  # Color coding for heart states
+  colors:
+    normal: "#e74c3c"       # Red - healthy
+    abnormal: "#f39c12"     # Orange/Yellow - warning
+    infarction: "#8b0000"   # Dark red - critical
+    damaged_zone: "#2c2c2c" # Dark - necrotic tissue
+
+  # Irregular pattern parameters
+  irregular:
+    jitter_percent: 15      # ±15% timing variation
+    skip_beat_chance: 0.1   # 10% chance of skipped beat
+
+viewer:
+  background_color: "#1a1a2e"
+  ambient_light: 0.4
+  directional_light: 0.8
+  camera_distance: 5
+  auto_rotate: false
+  show_bpm_counter: true
+  show_ecg_wave: true

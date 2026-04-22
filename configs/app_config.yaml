@@ -1,0 +1,22 @@
+# Application Configuration
+
+server:
+  host: "0.0.0.0"
+  port: 7860
+  debug: true
+
+paths:
+  model_checkpoint: models/checkpoints/best_model.pth
+  upload_dir: data/uploads
+  output_dir: data/outputs
+
+gradio:
+  title: "🫀 Heart Condition Detection & 3D Simulation"
+  description: "Upload face image → AI classification → 3D Heart visualization"
+  theme: soft
+  share: false
+
+inference:
+  device: cuda
+  confidence_threshold: 0.6
+  face_detection_confidence: 0.5
