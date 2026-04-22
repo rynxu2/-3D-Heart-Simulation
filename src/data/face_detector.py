@@ -2,41 +2,36 @@
 
 import cv2
 import numpy as np
-import mediapipe as mp
+import cv2
+import numpy as np
 from pathlib import Path
 from typing import Optional, Tuple, List
 from loguru import logger
+from mtcnn import MTCNN
 
 
 class FaceDetector:
-    """Detect and crop faces from images using MediaPipe Face Detection."""
+    """Detect and crop faces from images using MTCNN."""
 
-    def __init__(self, min_confidence: float = 0.5, target_size: int = 224):
+    def __init__(self, min_confidence: float = 0.8, target_size: int = 224):
         self.target_size = target_size
-        self.mp_face = mp.solutions.face_detection
-        self.detector = self.mp_face.FaceDetection(
-            model_selection=1,  # 0=short-range, 1=full-range
-            min_detection_confidence=min_confidence,
-        )
-        self.mp_draw = mp.solutions.drawing_utils
+        self.min_confidence = min_confidence
+        self.detector = MTCNN()
 
     def detect_faces(self, image: np.ndarray) -> List[dict]:
         """Detect all faces in image. Returns list of {bbox, confidence}."""
         rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        results = self.detector.process(rgb)
+        results = self.detector.detect_faces(rgb)
 
         faces = []
-        if not results.detections:
-            return faces
-
         h, w = image.shape[:2]
-        for detection in results.detections:
-            bbox = detection.location_data.relative_bounding_box
-            x = max(0, int(bbox.xmin * w))
-            y = max(0, int(bbox.ymin * h))
-            bw = int(bbox.width * w)
-            bh = int(bbox.height * h)
-
+        
+        for detection in results:
+            if detection['confidence'] < self.min_confidence:
+                continue
+                
+            x, y, bw, bh = detection['box']
+            
             # Add padding (20%) for better face context
             pad_x = int(bw * 0.2)
             pad_y = int(bh * 0.2)
@@ -47,7 +42,7 @@ class FaceDetector:
 
             faces.append({
                 "bbox": (x1, y1, x2, y2),
-                "confidence": detection.score[0],
+                "confidence": detection["confidence"],
             })
 
         return faces
@@ -56,6 +51,8 @@ class FaceDetector:
         """Crop and resize face region to target_size."""
         x1, y1, x2, y2 = bbox
         face = image[y1:y2, x1:x2]
+        if face.size == 0:
+            return np.zeros((self.target_size, self.target_size, 3), dtype=np.uint8)
         face = cv2.resize(face, (self.target_size, self.target_size))
         return face
 
@@ -100,6 +97,6 @@ class FaceDetector:
 
         return annotated
 
+
     def __del__(self):
-        if hasattr(self, "detector"):
-            self.detector.close()
+        pass
