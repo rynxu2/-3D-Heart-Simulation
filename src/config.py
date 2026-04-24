@@ -89,6 +89,50 @@ class Config:
         )
 
 
+@dataclass
+class SynPainConfig(Config):
+    """Extended config for SynPAIN dataset training."""
+    dataset_name: str = "TaatiTeam/SynPAIN"
+    cache_dir: str = "data/synpain_cache"
+    filter_type: str = "Images"
+    label_strategy: str = "binary"
+    freeze_epochs: int = 5
+    balance_demographics: bool = True
+
+    @classmethod
+    def from_yaml(cls, config_name: str = "synpain_config.yaml") -> "SynPainConfig":
+        config_path = CONFIGS_DIR / config_name
+        if not config_path.exists():
+            return cls()
+
+        with open(config_path, "r", encoding="utf-8") as f:
+            raw = yaml.safe_load(f)
+
+        return cls(
+            dataset_name=raw.get("dataset", {}).get("name", "TaatiTeam/SynPAIN"),
+            cache_dir=raw.get("dataset", {}).get("cache_dir", "data/synpain_cache"),
+            filter_type=raw.get("dataset", {}).get("filter_type", "Images"),
+            label_strategy=raw.get("dataset", {}).get("label_strategy", "binary"),
+            backbone=raw.get("model", {}).get("backbone", "efficientnet_b4"),
+            num_classes=raw.get("model", {}).get("num_classes", 2),
+            pretrained=raw.get("model", {}).get("pretrained", True),
+            dropout=raw.get("model", {}).get("dropout", 0.3),
+            freeze_epochs=raw.get("model", {}).get("freeze_epochs", 5),
+            image_size=raw.get("data", {}).get("image_size", 224),
+            batch_size=raw.get("data", {}).get("batch_size", 16),
+            num_workers=raw.get("data", {}).get("num_workers", 2),
+            train_split=raw.get("data", {}).get("train_split", 0.7),
+            val_split=raw.get("data", {}).get("val_split", 0.15),
+            test_split=raw.get("data", {}).get("test_split", 0.15),
+            epochs=raw.get("training", {}).get("epochs", 30),
+            learning_rate=raw.get("training", {}).get("learning_rate", 5e-5),
+            weight_decay=raw.get("training", {}).get("weight_decay", 1e-5),
+            early_stopping_patience=raw.get("training", {}).get("early_stopping_patience", 8),
+            mixed_precision=raw.get("training", {}).get("mixed_precision", True),
+            labels=raw.get("labels", ["no_pain", "pain"]),
+        )
+
+
 def load_heart_config() -> dict:
     config_path = CONFIGS_DIR / "heart_config.yaml"
     if not config_path.exists():

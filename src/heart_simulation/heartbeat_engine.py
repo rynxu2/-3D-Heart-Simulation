@@ -147,3 +147,16 @@ class HeartbeatEngine:
         bpm_info = prediction.get("bpm", {"min": 72, "max": 72, "pattern": "regular"})
         avg_bpm = (bpm_info["min"] + bpm_info["max"]) // 2
         return cls(bpm=avg_bpm, pattern=bpm_info["pattern"])
+
+    @classmethod
+    def from_label(cls, label: str) -> "HeartbeatEngine":
+        """Create engine from a condition label (normal/abnormal/infarction)."""
+        LABEL_PRESETS = {
+            "normal": {"bpm": 72, "pattern": "regular"},
+            "no_pain": {"bpm": 72, "pattern": "regular"},
+            "abnormal": {"bpm": 90, "pattern": "irregular"},
+            "infarction": {"bpm": 110, "pattern": "rapid_irregular"},
+            "pain": {"bpm": 110, "pattern": "rapid_irregular"},
+        }
+        preset = LABEL_PRESETS.get(label, LABEL_PRESETS["normal"])
+        return cls(bpm=preset["bpm"], pattern=preset["pattern"])

@@ -126,3 +126,71 @@ class ClassificationMetrics:
             logger.info(f"Training history saved: {save_path}")
 
         return fig
+
+    def compute_demographic_metrics(
+        self,
+        y_true: List[int],
+        y_pred: List[int],
+        demographics: List[dict],
+    ) -> dict:
+        """Compute accuracy per demographic subgroup for bias analysis."""
+        groups = {"gender": {}, "age": {}, "ethnicity": {}}
+
+        for i, meta in enumerate(demographics):
+            if not meta.get("valid", False):
+                continue
+
+            for key in ["gender", "age", "ethnicity"]:
+                group_val = meta.get(key, "Unknown")
+                if group_val not in groups[key]:
+                    groups[key][group_val] = {"correct": 0, "total": 0}
+                groups[key][group_val]["total"] += 1
+                if y_true[i] == y_pred[i]:
+                    groups[key][group_val]["correct"] += 1
+
+        results = {}
+        for key, subgroups in groups.items():
+            results[key] = {}
+            for group_name, counts in subgroups.items():
+                acc = counts["correct"] / counts["total"] if counts["total"] > 0 else 0
+                results[key][group_name] = {
+                    "accuracy": round(acc, 4),
+                    "total": counts["total"],
+                }
+
+        # Compute max accuracy gap per dimension
+        for key in results:
+            accs = [v["accuracy"] for v in results[key].values()]
+            results[f"{key}_gap"] = round(max(accs) - min(accs), 4) if accs else 0
+
+        return results
+
+    def plot_demographic_bias(self, demographic_results: dict, save_path: Optional[str] = None):
+        """Plot bar chart of accuracy per demographic subgroup."""
+        fig, axes = plt.subplots(1, 3, figsize=(18, 6))
+        colors = ["#2ecc71", "#3498db", "#e74c3c", "#f39c12", "#9b59b6"]
+
+        for ax, key in zip(axes, ["gender", "age", "ethnicity"]):
+            if key not in demographic_results:
+                continue
+            data = demographic_results[key]
+            names = list(data.keys())
+            accs = [data[n]["accuracy"] * 100 for n in names]
+            totals = [data[n]["total"] for n in names]
+
+            bars = ax.bar(names, accs, color=colors[: len(names)], edgecolor="white", linewidth=1.5)
+            ax.set_title(f"Accuracy by {key.title()}", fontsize=14, fontweight="bold")
+            ax.set_ylabel("Accuracy (%)")
+            ax.set_ylim(0, 105)
+            ax.axhline(y=np.mean(accs), color="gray", linestyle="--", alpha=0.5, label=f"Mean: {np.mean(accs):.1f}%")
+            ax.legend()
+
+            for bar, total in zip(bars, totals):
+                ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 1,
+                        f"n={total}", ha="center", va="bottom", fontsize=9)
+
+        plt.tight_layout()
+        if save_path:
+            plt.savefig(save_path, dpi=150)
+            logger.info(f"Demographic bias chart saved: {save_path}")
+        return fig

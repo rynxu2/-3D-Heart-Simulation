@@ -5,6 +5,7 @@ import torch.nn as nn
 from torchvision.models.video import r3d_18, R3D_18_Weights, mc3_18, MC3_18_Weights
 from typing import Optional
 from loguru import logger
+from pathlib import Path
 
 
 class HeartFaceClassifier3D(nn.Module):
@@ -64,6 +65,44 @@ class HeartFaceClassifier3D(nn.Module):
             probs = torch.softmax(logits, dim=1)
             pred_class = torch.argmax(probs, dim=1)
         return pred_class, probs
+
+    def freeze_backbone(self):
+        """Freeze feature extractor for transfer learning warmup."""
+        for param in self.features.parameters():
+            param.requires_grad = False
+        logger.info("3D backbone frozen — only classifier head will be trained")
+
+    def unfreeze_backbone(self):
+        """Unfreeze all layers for full fine-tuning."""
+        for param in self.features.parameters():
+            param.requires_grad = True
+        logger.info("3D backbone unfrozen — all layers trainable")
+
+    @classmethod
+    def from_checkpoint(
+        cls,
+        checkpoint_path: str | Path,
+        device: Optional[str] = None,
+        **kwargs,
+    ) -> "HeartFaceClassifier3D":
+        """Load model from a saved checkpoint."""
+        if device is None:
+            device = "cuda" if torch.cuda.is_available() else "cpu"
+
+        ckpt = torch.load(str(checkpoint_path), map_location=device, weights_only=True)
+        state = ckpt.get("model_state_dict", ckpt)
+
+        # Infer num_classes from checkpoint
+        fc_key = [k for k in state if "classifier" in k and "weight" in k]
+        num_classes = state[fc_key[-1]].shape[0] if fc_key else 3
+
+        model = cls(num_classes=num_classes, pretrained=False, **kwargs)
+        model.load_state_dict(state)
+        model = model.to(device)
+        model.eval()
+
+        logger.info(f"3D model loaded from {checkpoint_path} (classes={num_classes})")
+        return model
 
 
 def create_3d_classifier(

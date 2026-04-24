@@ -46,3 +46,7 @@ python-dotenv>=1.0.0
 # Utilities
 tqdm>=4.66.0
 loguru>=0.7.2
+
+# HuggingFace Dataset Loading
+datasets>=3.0.0
+huggingface-hub>=0.20.0

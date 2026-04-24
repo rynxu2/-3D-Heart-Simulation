@@ -6,7 +6,7 @@ server:
   debug: true
 
 paths:
-  model_checkpoint: models/checkpoints/best_model.pth
+  model_checkpoint: models/synpain_best_model.pth
   upload_dir: data/uploads
   output_dir: data/outputs
 

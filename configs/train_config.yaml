@@ -2,7 +2,7 @@
 model:
   # Options: efficientnet_b4, resnet50, resnet3d_18
   backbone: efficientnet_b4
-  num_classes: 3
+  num_classes: 2
   pretrained: true
   dropout: 0.3
 

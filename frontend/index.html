@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🫀 Nhận Dạng Triệu Chứng Tim & Mô Phỏng 3D</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/src/styles.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="app-header">
+    <div class="header-content">
+      <h1>🫀 Nhận Dạng Triệu Chứng Tim Qua Khuôn Mặt</h1>
+      <p class="subtitle">AI phân loại biểu cảm đau → Mô phỏng 3D tim đập thời gian thực</p>
+    </div>
+  </header>
+
+  <!-- Main Layout -->
+  <main class="app-main">
+    <!-- Left Panel: Upload -->
+    <section class="panel upload-panel" id="upload-panel">
+      <h2 class="panel-title">📷 Upload ảnh</h2>
+      <div class="upload-zone" id="upload-zone">
+        <input type="file" id="file-input" accept="image/*" hidden>
+        <div class="upload-placeholder" id="upload-placeholder">
+          <span class="upload-icon">📸</span>
+          <p>Kéo thả ảnh hoặc <strong>click để chọn</strong></p>
+          <p class="upload-hint">Hỗ trợ JPG, PNG</p>
+        </div>
+        <img id="preview-img" class="preview-img" alt="Preview" style="display:none;">
+      </div>
+      <button class="btn btn-primary" id="analyze-btn" disabled>🔍 Phân tích</button>
+
+      <!-- Results -->
+      <div class="results-card" id="results-card" style="display:none;">
+        <h3 class="results-title">Kết quả</h3>
+        <div class="result-label" id="result-label"></div>
+        <div class="result-confidence" id="result-confidence"></div>
+        <div class="result-bpm" id="result-bpm"></div>
+        <div class="prob-bars" id="prob-bars"></div>
+      </div>
+
+      <!-- Face Detection -->
+      <div class="face-detection" id="face-detection" style="display:none;">
+        <h3>Face Detection</h3>
+        <img id="face-img" class="face-img" alt="Detected face">
+      </div>
+    </section>
+
+    <!-- Center: 3D Heart -->
+    <section class="panel heart-panel">
+      <h2 class="panel-title">🫀 Mô Phỏng 3D Tim</h2>
+      <div class="heart-container" id="heart-container"></div>
+      <div class="heart-controls">
+        <div class="control-group">
+          <label for="bpm-slider">BPM</label>
+          <input type="range" id="bpm-slider" min="30" max="180" value="72" step="1">
+          <span class="bpm-value" id="bpm-value">72</span>
+        </div>
+        <div class="control-group">
+          <label for="condition-select">Trạng thái</label>
+          <select id="condition-select">
+            <option value="normal">🟢 Bình thường (60-80 BPM)</option>
+            <option value="abnormal">🟡 Bất thường — Rối loạn nhịp</option>
+            <option value="infarction">🔴 Nhồi máu cơ tim (90-130 BPM)</option>
+          </select>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right: ECG -->
+    <section class="panel ecg-panel">
+      <h2 class="panel-title">📈 Điện Tâm Đồ (ECG)</h2>
+      <canvas id="ecg-canvas" width="500" height="300"></canvas>
+      <div class="ecg-info" id="ecg-info">
+        <span class="ecg-bpm">72 BPM</span>
+        <span class="ecg-pattern">Nhịp đều</span>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="app-footer">
+    <p>Đồ án tốt nghiệp — Nhận dạng triệu chứng tim qua khuôn mặt | SynPAIN Model</p>
+  </footer>
+
+  <div class="loading-overlay" id="loading-overlay" style="display:none;">
+    <div class="spinner"></div>
+    <p>Đang phân tích...</p>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
