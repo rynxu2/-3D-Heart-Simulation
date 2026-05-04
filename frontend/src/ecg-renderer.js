@@ -1,9 +1,15 @@
 /**
  * Canvas-based ECG Renderer — real-time PQRST waveform.
+ *
+ * Medically accurate morphology per condition:
+ * - Normal: regular sinus rhythm with proper PQRST intervals
+ * - Abnormal: irregularly irregular (AF-like), absent P waves, variable amplitude
+ * - Infarction: ST elevation, pathologic Q waves, peaked/inverted T waves
  */
 
 const ECG_COLORS = {
   normal: '#00d68f',
+  no_pain: '#00d68f',
   pain: '#ff4757',
   abnormal: '#f59e0b',
   infarction: '#ff4757',
@@ -33,77 +39,151 @@ export class ECGRenderer {
   }
 
   _ecgValue(pos, cycleIndex = 0) {
-    // PQRST complex simulation with condition-specific morphology
+    // Route to condition-specific morphology
+    if (this.condition === 'abnormal') return this._ecgAbnormal(pos, cycleIndex);
+    if (this.condition === 'infarction' || this.condition === 'pain') return this._ecgInfarction(pos, cycleIndex);
+    return this._ecgNormal(pos);
+  }
+
+  // ── Normal Sinus Rhythm ─────────────────────────────
+  // PR: 160ms, QRS: 80ms, isoelectric ST, upright asymmetric T
+  _ecgNormal(pos) {
     let val = 0;
 
-    if (this.condition === 'abnormal') {
-      // Irregular rhythm: vary timing per beat
-      const shift = Math.sin(cycleIndex * 2.7) * 0.06;
-      pos = Math.max(0, Math.min(1, pos + shift));
-      // Variable amplitude
-      const ampFactor = 0.7 + Math.abs(Math.sin(cycleIndex * 1.3)) * 0.6;
-
-      // P wave — sometimes absent
-      if (pos > 0.0 && pos < 0.1 && cycleIndex % 3 !== 0) {
-        val = 0.12 * ampFactor * Math.sin((pos / 0.1) * Math.PI);
+    // P wave — smooth, rounded, 80ms duration (0.00–0.10)
+    if (pos > 0.00 && pos < 0.10) {
+      val = 0.15 * Math.sin((pos / 0.10) * Math.PI);
+    }
+    // PR segment — isoelectric (0.10–0.14)
+    // QRS complex — narrow 80ms (0.14–0.22)
+    else if (pos > 0.14 && pos < 0.22) {
+      const qrs = (pos - 0.14) / 0.08;
+      if (qrs < 0.15) {
+        // Q wave — small downward
+        val = -0.08 * Math.sin((qrs / 0.15) * Math.PI);
+      } else if (qrs < 0.50) {
+        // R wave — tall upward
+        val = 1.2 * Math.sin(((qrs - 0.15) / 0.35) * Math.PI);
+      } else {
+        // S wave — small downward
+        val = -0.20 * Math.sin(((qrs - 0.50) / 0.50) * Math.PI);
       }
-      // QRS — variable width and height
-      if (pos > 0.12 && pos < 0.22) {
-        const qrs = (pos - 0.12) / 0.10;
-        if (qrs < 0.2) val = -0.1 * ampFactor * Math.sin((qrs / 0.2) * Math.PI);
-        else if (qrs < 0.5) val = 1.0 * ampFactor * Math.sin(((qrs - 0.2) / 0.3) * Math.PI);
-        else val = -0.25 * ampFactor * Math.sin(((qrs - 0.5) / 0.5) * Math.PI);
+    }
+    // ST segment — isoelectric (0.22–0.28)
+    // T wave — upright, asymmetric: slower upstroke, faster downstroke (0.28–0.48)
+    else if (pos > 0.28 && pos < 0.48) {
+      const tPos = (pos - 0.28) / 0.20;
+      // Asymmetric T: rise over 60%, fall over 40%
+      if (tPos < 0.60) {
+        val = 0.30 * Math.sin((tPos / 0.60) * Math.PI * 0.5);
+      } else {
+        val = 0.30 * Math.cos(((tPos - 0.60) / 0.40) * Math.PI * 0.5);
       }
-      // T wave — inverted sometimes
-      if (pos > 0.28 && pos < 0.48) {
-        const sign = cycleIndex % 4 === 0 ? -1 : 1;
-        val = sign * 0.2 * ampFactor * Math.sin(((pos - 0.28) / 0.2) * Math.PI);
-      }
-      // Extra baseline noise
-      val += (Math.random() - 0.5) * 0.05;
-      return val;
     }
 
-    if (this.condition === 'infarction' || this.condition === 'pain') {
-      // P wave
-      if (pos > 0.0 && pos < 0.08) {
-        val = 0.18 * Math.sin((pos / 0.08) * Math.PI);
-      }
-      // QRS — tall, narrow
-      if (pos > 0.10 && pos < 0.18) {
-        const qrs = (pos - 0.10) / 0.08;
-        if (qrs < 0.2) val = -0.12 * Math.sin((qrs / 0.2) * Math.PI);
-        else if (qrs < 0.5) val = 1.4 * Math.sin(((qrs - 0.2) / 0.3) * Math.PI);
-        else val = -0.35 * Math.sin(((qrs - 0.5) / 0.5) * Math.PI);
-      }
-      // ST elevation (key indicator of MI)
-      if (pos > 0.18 && pos < 0.30) {
-        val += 0.30;
-      }
-      // T wave — peaked or inverted
-      if (pos > 0.30 && pos < 0.45) {
-        val = -0.25 * Math.sin(((pos - 0.30) / 0.15) * Math.PI);
-      }
-      val += (Math.random() - 0.5) * 0.02;
-      return val;
+    return val;
+  }
+
+  // ── Abnormal (Arrhythmia / Atrial Fibrillation) ─────
+  // Irregularly irregular RR, absent P waves, variable QRS amplitude
+  _ecgAbnormal(pos, cycleIndex) {
+    let val = 0;
+
+    // RR interval variation — true irregular timing
+    const shift = Math.sin(cycleIndex * 2.7 + 0.3) * 0.08
+                + Math.cos(cycleIndex * 1.9) * 0.04;
+    pos = Math.max(0, Math.min(1, pos + shift));
+
+    // Variable amplitude per beat (EF 35-55%)
+    const ampFactor = 0.65 + Math.abs(Math.sin(cycleIndex * 1.3 + 0.7)) * 0.55;
+
+    // P wave — ABSENT in AF (replaced by fibrillatory baseline)
+    // Only present in ~20% of beats (occasional sinus capture)
+    if (pos > 0.00 && pos < 0.10 && cycleIndex % 5 === 0) {
+      val = 0.10 * ampFactor * Math.sin((pos / 0.10) * Math.PI);
     }
 
-    // Normal sinus rhythm
-    // P wave (atrial depolarization)
-    if (pos > 0.0 && pos < 0.1) {
-      val = 0.15 * Math.sin((pos / 0.1) * Math.PI);
+    // QRS complex — variable width and height
+    if (pos > 0.12 && pos < 0.22) {
+      const qrs = (pos - 0.12) / 0.10;
+      if (qrs < 0.18) {
+        val = -0.10 * ampFactor * Math.sin((qrs / 0.18) * Math.PI);
+      } else if (qrs < 0.50) {
+        val = 1.0 * ampFactor * Math.sin(((qrs - 0.18) / 0.32) * Math.PI);
+      } else {
+        val = -0.22 * ampFactor * Math.sin(((qrs - 0.50) / 0.50) * Math.PI);
+      }
     }
-    // QRS complex
-    else if (pos > 0.12 && pos < 0.2) {
-      const qrs = (pos - 0.12) / 0.08;
-      if (qrs < 0.2) val = -0.1 * Math.sin((qrs / 0.2) * Math.PI);
-      else if (qrs < 0.5) val = 1.2 * Math.sin(((qrs - 0.2) / 0.3) * Math.PI);
-      else val = -0.3 * Math.sin(((qrs - 0.5) / 0.5) * Math.PI);
+
+    // ST segment — subtle depression in some beats
+    if (pos > 0.22 && pos < 0.28) {
+      val = (cycleIndex % 3 === 0) ? -0.06 : 0.0;
     }
-    // T wave
-    else if (pos > 0.25 && pos < 0.45) {
-      val = 0.3 * Math.sin(((pos - 0.25) / 0.2) * Math.PI);
+
+    // T wave — sometimes inverted (25% of beats)
+    if (pos > 0.28 && pos < 0.46) {
+      const sign = (cycleIndex % 4 === 1) ? -1 : 1;
+      val = sign * 0.18 * ampFactor * Math.sin(((pos - 0.28) / 0.18) * Math.PI);
     }
+
+    // Fibrillatory baseline undulation (chaotic, replaces P waves)
+    val += Math.sin(pos * 47 + cycleIndex * 3.1) * 0.04
+         + Math.sin(pos * 73 + cycleIndex * 5.7) * 0.025
+         + (Math.random() - 0.5) * 0.03;
+
+    return val;
+  }
+
+  // ── Infarction (Acute MI) ───────────────────────────
+  // Sinus tachycardia, ST ELEVATION, pathologic Q, peaked→inverted T
+  _ecgInfarction(pos, cycleIndex) {
+    let val = 0;
+
+    // P wave — peaked (atrial overload from fast rate)
+    if (pos > 0.00 && pos < 0.08) {
+      val = 0.20 * Math.sin((pos / 0.08) * Math.PI);
+    }
+
+    // QRS complex with pathologic Q wave
+    if (pos > 0.10 && pos < 0.20) {
+      const qrs = (pos - 0.10) / 0.10;
+      if (qrs < 0.12) {
+        // Pathologic Q wave — deeper and wider than normal (necrosis marker)
+        val = -0.18 * Math.sin((qrs / 0.12) * Math.PI);
+      } else if (qrs < 0.50) {
+        // Tall R wave
+        val = 1.4 * Math.sin(((qrs - 0.12) / 0.38) * Math.PI);
+      } else {
+        // S wave
+        val = -0.30 * Math.sin(((qrs - 0.50) / 0.50) * Math.PI);
+      }
+    }
+
+    // ★ ST SEGMENT ELEVATION — key MI indicator ★
+    // Elevated plateau (0.20–0.32) — the hallmark of acute STEMI
+    if (pos > 0.20 && pos < 0.32) {
+      const stProgress = (pos - 0.20) / 0.12;
+      // Smooth rise to plateau at 0.30 (representing ~3mm elevation)
+      val = 0.30 * Math.sin(stProgress * Math.PI * 0.5);
+    }
+
+    // T wave — evolving pattern based on MI phase
+    // Hyperacute: peaked tall T → later: deeply inverted T
+    if (pos > 0.32 && pos < 0.48) {
+      const tPos = (pos - 0.32) / 0.16;
+      // Use cycleIndex to show evolution: early beats peaked, later inverted
+      const phase = (cycleIndex % 6) / 6;
+      if (phase < 0.5) {
+        // Hyperacute: peaked tall T (early MI)
+        val = 0.35 * Math.sin(tPos * Math.PI);
+      } else {
+        // Evolving: deeply inverted T (ischemic)
+        val = -0.28 * Math.sin(tPos * Math.PI);
+      }
+    }
+
+    // Subtle baseline artifact
+    val += (Math.random() - 0.5) * 0.015;
 
     return val;
   }
@@ -140,7 +220,6 @@ export class ECGRenderer {
 
     // ECG trace (scrolling)
     const pixelsPerSec = 150;
-    const visibleDuration = w / pixelsPerSec;
 
     ctx.strokeStyle = color;
     ctx.lineWidth = 2;

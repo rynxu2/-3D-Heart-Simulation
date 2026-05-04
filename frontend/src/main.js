@@ -10,83 +10,144 @@ const heartViewer = new HeartViewer('heart-container');
 const ecgRenderer = new ECGRenderer('ecg-canvas');
 
 // ── DOM elements ────────────────────────────────────
-const fileInput = document.getElementById('file-input');
-const uploadZone = document.getElementById('upload-zone');
-const uploadPlaceholder = document.getElementById('upload-placeholder');
-const previewImg = document.getElementById('preview-img');
-const analyzeBtn = document.getElementById('analyze-btn');
-const resultsCard = document.getElementById('results-card');
+const btnStartCamera = document.getElementById('start-camera-btn');
+const videoFeed = document.getElementById('video-feed');
+const cameraOverlay = document.querySelector('.camera-overlay');
+
 const resultLabel = document.getElementById('result-label');
 const resultConfidence = document.getElementById('result-confidence');
 const resultBpm = document.getElementById('result-bpm');
 const probBars = document.getElementById('prob-bars');
-const loadingOverlay = document.getElementById('loading-overlay');
-const bpmSlider = document.getElementById('bpm-slider');
-const bpmValue = document.getElementById('bpm-value');
-const conditionSelect = document.getElementById('condition-select');
+
 const ecgBpm = document.querySelector('.ecg-bpm');
 const ecgPattern = document.querySelector('.ecg-pattern');
 
-let selectedFile = null;
+// Create a hidden canvas for capturing frames
+const captureCanvas = document.createElement('canvas');
 
-// ── Upload handling ─────────────────────────────────
-uploadZone.addEventListener('click', () => fileInput.click());
 
-uploadZone.addEventListener('dragover', (e) => {
-  e.preventDefault();
-  uploadZone.classList.add('drag-over');
-});
+// ── Media Handling (Camera & Video) ────────────────
+let stream = null;
+let isAnalyzing = false;
+let analysisInterval = null;
 
-uploadZone.addEventListener('dragleave', () => {
-  uploadZone.classList.remove('drag-over');
-});
-
-uploadZone.addEventListener('drop', (e) => {
-  e.preventDefault();
-  uploadZone.classList.remove('drag-over');
-  const file = e.dataTransfer.files[0];
-  if (file && file.type.startsWith('image/')) handleFile(file);
-});
-
-fileInput.addEventListener('change', () => {
-  if (fileInput.files[0]) handleFile(fileInput.files[0]);
-});
-
-function handleFile(file) {
-  selectedFile = file;
-  const url = URL.createObjectURL(file);
-  previewImg.src = url;
-  previewImg.style.display = 'block';
-  uploadPlaceholder.style.display = 'none';
-  analyzeBtn.disabled = false;
-}
-
-// ── Analysis ────────────────────────────────────────
-analyzeBtn.addEventListener('click', async () => {
-  if (!selectedFile) return;
-
-  loadingOverlay.style.display = 'flex';
-  analyzeBtn.disabled = true;
-
-  try {
-    const result = await predictImage(selectedFile);
-    displayResult(result);
-  } catch (err) {
-    console.error('Prediction error:', err);
-    resultLabel.textContent = `❌ Lỗi: ${err.message}`;
-    resultLabel.className = 'result-label';
-    resultsCard.style.display = 'block';
-  } finally {
-    loadingOverlay.style.display = 'none';
-    analyzeBtn.disabled = false;
+btnStartCamera.addEventListener('click', async () => {
+  if (isAnalyzing) {
+    stopCamera();
+  } else {
+    await startCamera();
   }
 });
 
-function displayResult(result) {
-  resultsCard.style.display = 'block';
+async function startCamera() {
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    videoFeed.srcObject = stream;
+    cameraOverlay.style.display = 'none';
+    
+    isAnalyzing = true;
+    btnStartCamera.innerHTML = '<i data-lucide="power-off"></i> Dừng Camera';
+    btnStartCamera.classList.add('btn-danger'); // Add a red style or similar
+    
+    // Auto-start analysis
+    startAnalysis();
+    
+    // Re-render lucide icons if defined
+    if (window.lucide) window.lucide.createIcons();
+  } catch (err) {
+    alert('Không thể truy cập Camera: ' + err.message);
+  }
+}
 
+function stopCamera() {
+  if (stream) {
+    stream.getTracks().forEach(track => track.stop());
+    stream = null;
+  }
+  videoFeed.srcObject = null;
+  cameraOverlay.style.display = 'flex';
+  
+  isAnalyzing = false;
+  btnStartCamera.innerHTML = '<i data-lucide="power"></i> Khởi Động Camera';
+  btnStartCamera.classList.remove('btn-danger');
+  
+  stopAnalysis();
+  
+  if (window.lucide) window.lucide.createIcons();
+}
+
+// ── Realtime Analysis ────────────────────────────────
+function captureFrame() {
+  const ctx = captureCanvas.getContext('2d');
+  // Set canvas size to match video aspect ratio (downscaled for speed)
+  captureCanvas.width = 300;
+  captureCanvas.height = 300 * (videoFeed.videoHeight / videoFeed.videoWidth);
+  ctx.drawImage(videoFeed, 0, 0, captureCanvas.width, captureCanvas.height);
+  
+  return new Promise(resolve => {
+    captureCanvas.toBlob(blob => {
+      // Create a fake File object from the blob
+      const file = new File([blob], "frame.jpg", { type: "image/jpeg" });
+      resolve(file);
+    }, 'image/jpeg', 0.8);
+  });
+}
+
+function stopAnalysis() {
+  clearTimeout(analysisInterval);
+  resultLabel.textContent = 'ĐANG CHỜ TÍN HIỆU...';
+  resultLabel.className = 'result-label';
+  resultConfidence.textContent = 'Độ Tin Cậy: --%';
+  resultBpm.textContent = 'Dự Đoán: -- BPM';
+  probBars.innerHTML = '';
+}
+
+function startAnalysis() {
+  if (!videoFeed.srcObject) return;
+  
+  let isProcessing = false;
+  let consecutiveErrors = 0;
+  const BASE_INTERVAL = 1500;
+  const MAX_INTERVAL = 30000; // Back off to 30s max when backend is down
+
+  function scheduleNext() {
+    // Exponential backoff: 1.5s → 3s → 6s → 12s → 24s → 30s (cap)
+    const delay = Math.min(BASE_INTERVAL * Math.pow(2, consecutiveErrors), MAX_INTERVAL);
+    analysisInterval = setTimeout(runAnalysis, delay);
+  }
+
+  async function runAnalysis() {
+    if (!isAnalyzing) return;
+    if (isProcessing) { scheduleNext(); return; }
+    if (videoFeed.paused || videoFeed.ended) { scheduleNext(); return; }
+    
+    isProcessing = true;
+    try {
+      const frameFile = await captureFrame();
+      const result = await predictImage(frameFile);
+      consecutiveErrors = 0; // Reset on success
+      displayResult(result);
+    } catch (err) {
+      consecutiveErrors++;
+      if (consecutiveErrors >= 3) {
+        resultLabel.textContent = '⚠ BACKEND OFFLINE';
+        resultLabel.className = 'result-label';
+        resultConfidence.textContent = 'Server AI chưa khởi động (port 7860)';
+        resultBpm.textContent = `Thử lại sau ${Math.min(BASE_INTERVAL * Math.pow(2, consecutiveErrors) / 1000, 30).toFixed(0)}s...`;
+      }
+      console.warn(`[API] Backend unreachable (attempt ${consecutiveErrors})`);
+    } finally {
+      isProcessing = false;
+      if (isAnalyzing) scheduleNext();
+    }
+  }
+
+  runAnalysis();
+}
+
+function displayResult(result) {
   if (!result.face_detected) {
-    resultLabel.textContent = '❌ Không phát hiện khuôn mặt';
+    resultLabel.textContent = 'KHÔNG THẤY KHUÔN MẶT';
     resultLabel.className = 'result-label';
     return;
   }
@@ -110,9 +171,12 @@ function displayResult(result) {
   resultConfidence.textContent = `Độ tin cậy: ${(result.confidence * 100).toFixed(1)}%`;
 
   const bpm = result.bpm;
-  resultBpm.textContent = `Nhịp tim: ${bpm.min}-${bpm.max} BPM (${bpm.pattern})`;
+  const estBpm = bpm.estimated || Math.round((bpm.min + bpm.max) / 2);
+  resultBpm.textContent = `Nhịp tim: ~${estBpm} BPM (${bpm.min}-${bpm.max})`;
 
-  // Probability bars — support both 2 and 3 classes
+  // Removed painScore and resultModel to simplify Option B layout
+
+  // Probability bars
   const probs = result.all_probs || {};
   const labelNameMap = {
     no_pain: 'Không đau', pain: 'Đau',
@@ -139,50 +203,15 @@ function displayResult(result) {
   }).join('');
 
   // Update 3D and ECG with the actual condition
-  const avgBpm = Math.round((bpm.min + bpm.max) / 2);
-
-  heartViewer.setBPM(avgBpm);
+  heartViewer.setBPM(estBpm);
   heartViewer.setCondition(condition);
-  ecgRenderer.setBPM(avgBpm);
+  ecgRenderer.setBPM(estBpm);
   ecgRenderer.setCondition(condition);
 
-  bpmSlider.value = avgBpm;
-  bpmValue.textContent = avgBpm;
-  conditionSelect.value = condition;
-  ecgBpm.textContent = `${avgBpm} BPM`;
+  ecgBpm.textContent = `${estBpm} BPM`;
 
   const patternNames = {
     regular: 'Nhịp đều', irregular: 'Nhịp không đều', rapid_irregular: 'Nhịp nhanh không đều',
   };
   ecgPattern.textContent = patternNames[bpm.pattern] || bpm.pattern;
 }
-
-// ── Manual Controls ─────────────────────────────────
-bpmSlider.addEventListener('input', () => {
-  const bpm = parseInt(bpmSlider.value);
-  bpmValue.textContent = bpm;
-  heartViewer.setBPM(bpm);
-  ecgRenderer.setBPM(bpm);
-  ecgBpm.textContent = `${bpm} BPM`;
-});
-
-conditionSelect.addEventListener('change', () => {
-  const cond = conditionSelect.value;
-  heartViewer.setCondition(cond);
-  ecgRenderer.setCondition(cond);
-
-  // Auto-set typical BPM for selected condition
-  const condBpm = {
-    normal: { bpm: 72, text: 'Nhịp đều' },
-    abnormal: { bpm: 90, text: 'Nhịp không đều' },
-    infarction: { bpm: 110, text: 'Nhịp nhanh không đều' },
-  };
-  const info = condBpm[cond] || condBpm.normal;
-
-  heartViewer.setBPM(info.bpm);
-  ecgRenderer.setBPM(info.bpm);
-  bpmSlider.value = info.bpm;
-  bpmValue.textContent = info.bpm;
-  ecgBpm.textContent = `${info.bpm} BPM`;
-  ecgPattern.textContent = info.text;
-});

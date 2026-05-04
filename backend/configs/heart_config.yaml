@@ -1,0 +1,71 @@
+# Heart Simulation Configuration
+
+heart_models:
+  anatomy:
+    model_path: src/web/static/heart_anatomy.glb
+    description: "Anatomical heart with 4 chambers"
+    source: sketchfab
+    animation_type: morph_target
+    
+  medical:
+    model_path: data/medical_3d/
+    description: "Heart from CT/MRI segmentation"
+    segmentation_tool: totalsegmentator
+    export_format: glb
+
+simulation:
+  fps: 60
+  systole_ratio: 0.33  # contraction = 1/3 of cycle
+  diastole_ratio: 0.67  # relaxation = 2/3 of cycle
+  
+  contraction_scale:
+    min: 0.85  # max contraction
+    max: 1.0   # fully relaxed
+  
+  # Color coding for heart states
+  colors:
+    normal: "#e74c3c"       # Red - healthy
+    abnormal: "#f39c12"     # Orange/Yellow - warning
+    infarction: "#8b0000"   # Dark red - critical
+    damaged_zone: "#2c2c2c" # Dark - necrotic tissue
+
+  # Irregular pattern parameters
+  irregular:
+    jitter_percent: 15      # ±15% timing variation
+    skip_beat_chance: 0.1   # 10% chance of skipped beat
+
+viewer:
+  background_color: "#1a1a2e"
+  ambient_light: 0.4
+  directional_light: 0.8
+  camera_distance: 5
+  auto_rotate: false
+  show_bpm_counter: true
+  show_ecg_wave: true
+
+# Medically researched cardiac mechanics per condition
+cardiac_mechanics:
+  normal:
+    ejection_fraction: [55, 70]    # % of blood ejected per beat
+    contraction_scale: [0.85, 1.0] # Scale range during systole
+    torsion_degrees: [10, 15]      # Apex twist angle
+    systole_ratio: 0.33            # Systole = 1/3 of cycle
+    rr_variability: 0.0            # No beat-to-beat variation
+    contraction_force: 1.0         # Full pump strength
+  abnormal:
+    ejection_fraction: [35, 55]
+    contraction_scale: [0.88, 1.0]
+    torsion_degrees: [15, 20]
+    systole_ratio: 0.30
+    rr_variability: 0.20           # ±20% RR interval (AF)
+    contraction_force: 0.70
+    skip_beat_chance: 0.12
+  infarction:
+    ejection_fraction: [20, 40]
+    contraction_scale: [0.90, 1.0]
+    torsion_degrees: [20, 25]
+    systole_ratio: 0.35
+    rr_variability: 0.15
+    contraction_force: 0.45
+    wall_akinesis_percent: 30      # 30% of wall segments don't contract
+

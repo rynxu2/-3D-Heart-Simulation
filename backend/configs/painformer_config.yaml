@@ -1,0 +1,68 @@
+# PainFormer Zero-Shot Cardiac Detection Config
+# Model: PainFormer (SpectFormer backbone, 19.6M params, 160-D embeddings)
+# Strategy: Zero-shot classification using discriminative embedding dimensions
+
+model:
+  backbone: painformer
+  backbone_path: tools/PainFormer/painformer.pth
+  embed_dim: 160
+  num_classes: 3
+  classification_mode: zeroshot  # "zeroshot" | "trained"
+
+zeroshot:
+  # Discovered via embedding analysis on pain vs neutral videos
+  pain_positive_dims: [69, 47, 9, 23, 53, 39, 85, 77, 104, 29]
+  pain_negative_dims: [109, 117, 25, 157, 113, 65, 141, 112, 152, 148]
+  # Classification thresholds (pain_score 0-1 range)
+  threshold_normal: 0.30
+  threshold_abnormal: 0.65
+  # Temporal smoothing window for video inference
+  temporal_smooth_k: 5
+
+normalization:
+  type: vggface2
+  mean: [0.6068, 0.4517, 0.3800]
+  std: [0.2492, 0.2173, 0.2082]
+
+data:
+  image_size: 224
+  face_detection_confidence: 0.5
+
+labels:
+  - normal
+  - abnormal
+  - infarction
+
+label_to_bpm:
+  normal:
+    min: 60
+    max: 100
+    pattern: regular
+  abnormal_brady:
+    min: 40
+    max: 60
+    pattern: irregular
+  abnormal_tachy:
+    min: 100
+    max: 120
+    pattern: irregular
+  infarction_brady:
+    min: 30
+    max: 50
+    pattern: rapid_irregular
+  infarction_tachy:
+    min: 120
+    max: 160
+    pattern: rapid_irregular
+
+# Future training config (when labeled data is available)
+training:
+  epochs: 40
+  freeze_epochs: 15
+  lr_head: 0.001
+  lr_backbone: 0.00003
+  weight_decay: 0.00001
+  scheduler: cosine
+  early_stopping_patience: 8
+  focal_loss_gamma: 2.0
+  class_weights: [1.0, 1.1, 10.0]
