@@ -7,7 +7,7 @@ from typing import Optional
 import cv2
 import torch
 import numpy as np
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -178,6 +178,71 @@ async def predict_painformer(file: UploadFile = File(...)):
         "model_type": "painformer_zeroshot",
         "num_classes": 3,
     })
+
+
+# ── Predict with PainFormer (WebSocket) ────────────────────
+@app.websocket("/ws/analyze")
+async def websocket_analyze(websocket: WebSocket):
+    """Real-time face image streaming → PainFormer zero-shot → cardiac condition."""
+    await websocket.accept()
+    classifier = get_model_painformer()
+    
+    try:
+        while True:
+            # Receive bytes from frontend
+            data = await websocket.receive_bytes()
+            
+            # Decode bytes directly into cv2 image without saving to disk
+            nparr = np.frombuffer(data, np.uint8)
+            image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+            
+            if image is None:
+                await websocket.send_json({"error": "Cannot decode image", "face_detected": False})
+                continue
+            
+            # Predict
+            result = classifier.classify(image)
+            
+            if not result.get("face_detected", False):
+                await websocket.send_json({"face_detected": False})
+                continue
+                
+            pain_score = result["pain_score"]
+            estimated_bpm = pain_score_to_bpm(pain_score)
+            label = result["label"]
+            bpm_info = LABEL_TO_BPM.get(label, LABEL_TO_BPM["normal"])
+            
+            response_payload = {
+                "face_detected": True,
+                "label": label,
+                "label_vi": LABEL_DISPLAY.get(label, label),
+                "confidence": result["confidence"],
+                "pain_score": pain_score,
+                "all_probs": {
+                    "normal": max(0, 1.0 - pain_score * 1.5) if label == "normal" else 0.0,
+                    "abnormal": min(1.0, pain_score * 2) if label == "abnormal" else 0.0,
+                    "infarction": min(1.0, (pain_score - 0.5) * 2) if label == "infarction" else pain_score,
+                },
+                "bpm": {
+                    "min": bpm_info["min"],
+                    "max": bpm_info["max"],
+                    "estimated": estimated_bpm,
+                    "pattern": bpm_info["pattern"],
+                },
+                "condition": LABEL_TO_CONDITION.get(label, label),
+            }
+            
+            # Send result back
+            await websocket.send_json(response_payload)
+            
+    except WebSocketDisconnect:
+        logger.info("Client disconnected from /ws/analyze")
+    except Exception as e:
+        logger.error(f"WebSocket error: {e}")
+        try:
+            await websocket.send_json({"error": str(e), "face_detected": False})
+        except:
+            pass
 
 
 # ── Heart Simulation Params ───────────────────────────────

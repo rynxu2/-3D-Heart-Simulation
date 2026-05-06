@@ -3,7 +3,7 @@
  */
 import { HeartViewer } from './heart-viewer.js';
 import { ECGRenderer } from './ecg-renderer.js';
-import { predictImage } from './api-client.js';
+// import { predictImage } from './api-client.js';
 
 // ── Initialize components ───────────────────────────
 const heartViewer = new HeartViewer('heart-container');
@@ -76,25 +76,89 @@ function stopCamera() {
   if (window.lucide) window.lucide.createIcons();
 }
 
-// ── Realtime Analysis ────────────────────────────────
+// ── Realtime Analysis (WebSocket) ────────────────────
+let ws = null;
+let wsReconnectTimeout = null;
+let consecutiveErrors = 0;
+const BASE_INTERVAL = 1500;
+const MAX_INTERVAL = 30000;
+
+function connectWebSocket() {
+  if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
+  
+  // Use current hostname, default backend port 7860
+  const wsUrl = `ws://${window.location.hostname}:7860/ws/analyze`;
+  ws = new WebSocket(wsUrl);
+
+  ws.onopen = () => {
+    console.log('[WS] Connected to ' + wsUrl);
+    consecutiveErrors = 0;
+    if (isAnalyzing) sendNextFrame();
+  };
+
+  ws.onmessage = (event) => {
+    try {
+      const result = JSON.parse(event.data);
+      if (result.error) {
+        console.warn('[WS] Error from server:', result.error);
+      } else {
+        displayResult(result);
+      }
+    } catch (e) {
+      console.error('[WS] Parse error', e);
+    }
+    
+    // Ping-pong mechanism to prevent backpressure
+    if (isAnalyzing && ws.readyState === WebSocket.OPEN) {
+      requestAnimationFrame(sendNextFrame);
+    }
+  };
+
+  ws.onclose = () => {
+    console.warn('[WS] Disconnected');
+    ws = null;
+    if (isAnalyzing) {
+      consecutiveErrors++;
+      const delay = Math.min(BASE_INTERVAL * Math.pow(2, consecutiveErrors), MAX_INTERVAL);
+      
+      if (consecutiveErrors >= 3) {
+        resultLabel.textContent = '⚠ BACKEND OFFLINE';
+        resultLabel.className = 'result-label';
+        resultConfidence.textContent = 'Mất kết nối Server AI';
+        resultBpm.textContent = `Thử lại sau ${(delay / 1000).toFixed(0)}s...`;
+      }
+      
+      clearTimeout(wsReconnectTimeout);
+      wsReconnectTimeout = setTimeout(connectWebSocket, delay);
+    }
+  };
+
+  ws.onerror = (err) => {
+    console.error('[WS] Error:', err);
+    // ws.close() will trigger onclose which handles the reconnection
+    if (ws.readyState === WebSocket.OPEN) ws.close();
+  };
+}
+
 function captureFrame() {
   const ctx = captureCanvas.getContext('2d');
-  // Set canvas size to match video aspect ratio (downscaled for speed)
   captureCanvas.width = 300;
   captureCanvas.height = 300 * (videoFeed.videoHeight / videoFeed.videoWidth);
   ctx.drawImage(videoFeed, 0, 0, captureCanvas.width, captureCanvas.height);
   
   return new Promise(resolve => {
     captureCanvas.toBlob(blob => {
-      // Create a fake File object from the blob
-      const file = new File([blob], "frame.jpg", { type: "image/jpeg" });
-      resolve(file);
+      resolve(blob);
     }, 'image/jpeg', 0.8);
   });
 }
 
 function stopAnalysis() {
-  clearTimeout(analysisInterval);
+  clearTimeout(wsReconnectTimeout);
+  if (ws) {
+    ws.close();
+    ws = null;
+  }
   resultLabel.textContent = 'ĐANG CHỜ TÍN HIỆU...';
   resultLabel.className = 'result-label';
   resultConfidence.textContent = 'Độ Tin Cậy: --%';
@@ -104,45 +168,18 @@ function stopAnalysis() {
 
 function startAnalysis() {
   if (!videoFeed.srcObject) return;
+  connectWebSocket();
+}
+
+async function sendNextFrame() {
+  if (!isAnalyzing || !ws || ws.readyState !== WebSocket.OPEN) return;
+  if (videoFeed.paused || videoFeed.ended) {
+    setTimeout(sendNextFrame, 100);
+    return;
+  }
   
-  let isProcessing = false;
-  let consecutiveErrors = 0;
-  const BASE_INTERVAL = 1500;
-  const MAX_INTERVAL = 30000; // Back off to 30s max when backend is down
-
-  function scheduleNext() {
-    // Exponential backoff: 1.5s → 3s → 6s → 12s → 24s → 30s (cap)
-    const delay = Math.min(BASE_INTERVAL * Math.pow(2, consecutiveErrors), MAX_INTERVAL);
-    analysisInterval = setTimeout(runAnalysis, delay);
-  }
-
-  async function runAnalysis() {
-    if (!isAnalyzing) return;
-    if (isProcessing) { scheduleNext(); return; }
-    if (videoFeed.paused || videoFeed.ended) { scheduleNext(); return; }
-    
-    isProcessing = true;
-    try {
-      const frameFile = await captureFrame();
-      const result = await predictImage(frameFile);
-      consecutiveErrors = 0; // Reset on success
-      displayResult(result);
-    } catch (err) {
-      consecutiveErrors++;
-      if (consecutiveErrors >= 3) {
-        resultLabel.textContent = '⚠ BACKEND OFFLINE';
-        resultLabel.className = 'result-label';
-        resultConfidence.textContent = 'Server AI chưa khởi động (port 7860)';
-        resultBpm.textContent = `Thử lại sau ${Math.min(BASE_INTERVAL * Math.pow(2, consecutiveErrors) / 1000, 30).toFixed(0)}s...`;
-      }
-      console.warn(`[API] Backend unreachable (attempt ${consecutiveErrors})`);
-    } finally {
-      isProcessing = false;
-      if (isAnalyzing) scheduleNext();
-    }
-  }
-
-  runAnalysis();
+  const blob = await captureFrame();
+  ws.send(blob);
 }
 
 function displayResult(result) {
