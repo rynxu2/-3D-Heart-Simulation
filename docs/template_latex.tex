@@ -1,0 +1,447 @@
+\documentclass[journal]{IEEEtran}
+\setcounter{page}{23}  % Bắt đầu đánh số trang từ trang 23
+\pagestyle{plain}
+% *** CITATION PACKAGES ***
+\usepackage[style=ieee]{biblatex} 
+\bibliography{example_bib.bib}    %your file created using JabRef
+\usepackage{hyperref}
+\usepackage{amssymb}
+% TIENG VIET THI UNCOMMENT DONG BEN DUOI
+\usepackage[utf8]{vietnam}
+\usepackage{amsmath}
+\usepackage{caption}
+% *** MATH PACKAGES ***
+\usepackage{amsmath}
+ \usepackage{multirow}
+
+% *** PDF, URL AND HYPERLINK PACKAGES ***
+\usepackage{url}
+% correct bad hyphenation here
+\hyphenation{op-tical net-works semi-conduc-tor}
+\usepackage{graphicx}  %needed to include png, eps figures
+\usepackage{float}  % used to fix location of images i.e.\begin{figure}[H]
+
+\begin{document}
+
+% paper title
+\title{Hệ thống nhận dạng chuyển động con người sử dụng cảm
+biến thông minh}
+
+% author names and affiliations
+\author{\textbf{Đỗ Bảo Long}, \textbf{Phùng Nguyễn Trung Đức}, \textbf{Tạ Hồng Lịch}, \textbf{Nguyễn Tuấn Anh}\\
+        \textit{Nhóm 4 ,Lớp CNTT16-06, Khoa Công Nghệ Thông Tin} \\ 
+        \textit{Trường Đại Học Đại Nam, Việt Nam} \\
+        \textbf{ThS. Lê Trung Hiếu}, \textbf{KS. Nguyễn Thái Khánh} \\ 
+        \textit{Giảng viên hướng dẫn, Khoa Công Nghệ Thông Tin} \\ 
+        \textit{Trường Đại Học Đại Nam, Việt Nam}
+}
+     
+
+\maketitle
+\thispagestyle{plain}
+% As a general rule, do not put math, special symbols or citations
+% in the abstract or keywords.
+\begin{abstract} 
+Tóm tắt nội dung: Bài báo cáo này trình bày mô hình AI kết hợp IoT nhóm chúng em phát triển để nhận chuyển động con người dùng cảm biến MPU 6050. Dữ liệu được sử dụng để huấn luyệnlà bộ dữ liệu được thu của 10 bạn sinh viên. Cuối cùng, thu được kết quả với độ chính xác cao trên 6 loại hành động: Standing (đứng), Sitting (ngồi),Falling (ngã), Jumping (nhảy), Jogging (chạy bộ)và Walking (đi bộ) với độ chính xác tổng thể 93\%.
+\end{abstract}
+\section{GIỚI THIỆU}
+
+Công nghệ thông tin nói chung và trí tuệ nhân tạo
+nói riêng đang ngày càng được quan tâm và ứng
+dụng trong nhiều lĩnh vực trong cuộc sống: y tế,
+giáo dục, kinh doanh, dịch vụ,... Trong đó, chủ
+đề nhận dạng chuyển động con người là một chủ
+đề mang tính ứng dụng cao. Nhận diện chuyển
+động không chỉ giúp con người theo dõi hoạt động
+mà còn có nhiều ứng dụng quan trọng trong các
+lĩnh vực như chăm sóc sức khỏe, thể thao, an
+ninh. Ví dụ, trong y tế, việc theo dõi chuyển động
+của người bệnh hoặc người già sẽ sớm phát hiện
+những chuyển động như ngã để kịp thời phát hiện
+và dễ dàng theo dõi hoạt động của con người.
+Trong thể thao có thể theo dõi từ xa quá trình tập
+luyện của các vận động viên như chạy và nhảy
+để đảm bảo đúng quy trình tập luyện. Nhận diện
+chuyển động con người là một bài toán thuộc lĩnh
+vực học máy và IoT, trong đó mục tiêu chính là
+phân loại chuyển động vào các trạng thái khác
+nhau như nhảy, đi bộ, ngã, chạy bộ, ngồi, đứng.
+Đây là một bài toán thú vị nhưng cũng đầy thách
+thức do sự đa dạng trong quá trình thu dữ liệu của
+của mỗi cá nhân, sự ảnh hưởng của chiều cao, cân
+nặng và tốc độ hoạt động của từng chuyển động
+và một số yếu tố khác.
+
+
+\section{CÁC NGHIÊN CỨU CÓ LIÊN QUAN}
+
+1. Phân loại và nhận dạng chuyển động bằng cảm biến quán tính (IMU)
+
+Cảm biến quán tính (IMU) gồm gia tốc kế (Accelerometer) và con quay hồi chuyển (Gyroscope), thường được sử dụng để nhận diện các loại chuyển động như đi bộ, chạy, ngồi, đứng.
+
+Phương pháp: Dữ liệu thu thập từ IMU được tiền xử lý và đưa vào các mô hình máy học như K-Nearest Neighbors (KNN), Support Vector Machine (SVM) hoặc mạng nơ-ron tích chập (CNN) để phân loại chuyển động.
+
+Ứng dụng: Theo dõi hoạt động thể chất, giám sát bệnh nhân trong y tế, hỗ trợ phục hồi chức năng.\\
+
+2.  Nhận diện tư thế và chuyển động bằng cảm biến hồng ngoại thụ động(PIR)
+
+Cảm biến PIR hoạt động dựa trên sự thay đổi nhiệt độ do chuyển động của con người trong vùng cảm biến.
+
+Phương pháp: Khi phát hiện chuyển động, vi điều khiển (như ESP32 hoặc Raspberry Pi) xử lý tín hiệu để xác định hướng di chuyển và thời gian tồn tại của đối tượng.
+
+Ứng dụng: Hệ thống an ninh, nhà thông minh (tự động bật đèn khi có người), giám sát hoạt động trong các không gian công cộng.\\
+
+3. Hệ thống giám sát và phân tích chuyển động bằng Camera + AI
+
+Công nghệ xử lý ảnh và trí tuệ nhân tạo (AI) cho phép nhận dạng chuyển động con người thông qua camera.
+
+Phương pháp: Sử dụng OpenCV kết hợp với các mô hình học sâu như YOLO, PoseNet hoặc OpenPose để trích xuất khung xương (skeleton) và phân tích hành vi.
+
+Ứng dụng: Giám sát an ninh (phát hiện kẻ xâm nhập), phát hiện ngã trong y tế, hỗ trợ phân tích động tác trong thể thao.\\
+
+4. Ứng dụng cảm biến radar mmWave để theo dõi chuyển động
+
+Cảm biến sóng radar mmWave (millimeter-wave) sử dụng tần số cao để phát hiện chuyển động mà không cần ánh sáng hoặc camera.
+
+Phương pháp: Radar phát sóng và phân tích phản xạ từ cơ thể người để xác định hướng, tốc độ và kiểu chuyển động.
+
+Ứng dụng: Giám sát người cao tuổi trong môi trường tối, phát hiện ngã mà không cần đeo thiết bị, kiểm soát ra vào khu vực an ninh.\\
+
+5. Nhận dạng chuyển động bằng cảm biến áp suất và gia tốc trên đế giày thông minh
+
+Bằng cách tích hợp cảm biến áp suất và gia tốc vào đế giày, hệ thống có thể xác định kiểu di chuyển của người dùng.
+
+Phương pháp: Dữ liệu từ cảm biến được xử lý bằng các thuật toán nhận dạng mẫu để phân biệt đi bộ, chạy bộ, leo cầu thang.
+
+Ứng dụng: Theo dõi hoạt động thể chất, hỗ trợ y tế cho bệnh nhân Parkinson hoặc người cao tuổi.
+
+\section{PHƯƠNG PHÁP ĐỀ XUẤT}
+\textbf{A.  Xây dựng tập dữ liệu chuyển động thực tế}\\
+Nhóm đề xuất thu thập một tập dữ liệu chuyển động thực tế từ cảm biến MPU6050, giúp cải thiện khả năng huấn luyện mô hình phân loại. Dữ liệu được thu thập từ nhiều người dùng trong các điều kiện khác nhau để đảm bảo tính đa dạng và chính xác.
+
+Lợi ích: Mô hình sẽ hoạt động hiệu quả hơn trong môi trường thực tế, giảm sai số khi áp dụng vào ứng dụng giám sát.
+
+Phương pháp: Tiến hành thu thập dữ liệu từ cảm biến trong các tình huống thực tế (đi bộ, chạy, đứng, ngồi) và gán nhãn dữ liệu để huấn luyện mô hình.
+
+Mở rộng: Sau khi thu thập đủ dữ liệu, tiến hành tiền xử lý bằng cách chuẩn hóa, loại bỏ nhiễu và trích xuất đặc trưng quan trọng để tăng độ chính xác của mô hình.
+
+\textbf{B. Gửi dữ liệu lên máy chủ và hiển thị trên ứng dụng web}\\
+Nhóm đề xuất xây dựng hệ thống thu thập và truyền dữ liệu từ cảm biến lên máy chủ để hiển thị trực quan trên ứng dụng web.
+
+Công nghệ sử dụng: ESP32 gửi dữ liệu qua WiFi đến server, xử lý bằng Python Flask  sau đó hiển thị trên giao diện web.
+
+Các bước thực hiện:
+
+Cảm biến MPU6050 thu thập dữ liệu chuyển động và gửi về ESP32.
+
+ESP32 xử lý sơ bộ và truyền dữ liệu lên server qua giao thức HTTP.
+
+Server tiếp nhận dữ liệu, lưu trữ vào cơ sở dữ liệu (MySQL, MongoDB) để phân tích.
+
+Giao diện web hiển thị dữ liệu theo thời gian thực, cung cấp biểu đồ phân tích và cảnh báo khi phát hiện chuyển động bất thường.
+
+Lợi ích:
+
+Người dùng có thể theo dõi chuyển động theo thời gian thực.
+
+Dữ liệu có thể được lưu trữ để phân tích xu hướng chuyển động trong thời gian dài.
+
+Có thể tích hợp hệ thống cảnh báo khi phát hiện chuyển động bất thường.
+
+Tích hợp với các hệ thống khác như smart home, giám sát an ninh.
+\section{THU THẬP DỮ LIỆU}
+
+Quá trình thu thập dữ liệu trong nghiên cứu này được thực hiện một cách có hệ thống nhằm đảm bảo chất lượng và tính chính xác của dữ liệu đầu vào. Nghiên cứu sử dụng cảm biến MPU 6050 để ghi lại hành động của các tình nguyện viên, với mục tiêu xây dựng tập dữ liệu phục vụ cho bài toán nhận dạng hành động.\\
+
+Cụ thể, nhóm tình nguyện viên gồm 10 người (8 nam, 2 nữ) trong độ tuổi từ 20 đến 21 được lựa chọn để thực hiện năm hành động cơ bản: **ngồi, đi bộ, chạy, nhảy, ngã**. Trước khi thu thập dữ liệu, các tình nguyện viên được hướng dẫn chi tiết về phạm vi hoạt động, vị trí đặt cảm biến và yêu cầu của nghiên cứu. Đồng thời, cảm biến được kiểm tra kỹ lưỡng nhằm đảm bảo dữ liệu phù hợp, tránh rung lắc và đảm bảo chất lượng dữ liệu ổn định.\\
+
+Trong quá trình thực hiện, từng tình nguyện viên sẽ lần lượt thực hiện năm hành động theo trình tự cố định: **đứng → ngồi → đi bộ → chạy → nhảy → ngã**. Mỗi hành động sẽ được thực hiện nhiều lần trong các môi trường mô phỏng phù hợp nhằm đảm bảo tính ổn định của dữ liệu. Để tăng tính đa dạng và độ chính xác, mỗi hành động được lặp lại 10 lần, với thời gian thực hiện từ 2 đến 5 giây tùy thuộc vào từng hành động cụ thể (chẳng hạn, thời gian thực hiện hành động *ngồi* thường dài hơn so với *nhảy*). Cảm biến sẽ thu lại tín hiệu gia tốc có tần số 50Hz và gửi về máy tính thông qua esp-32.\\
+
+Cảm biến được đặt bên hông phải tình nguyện viên. Trước khi bắt đầu thu dữ liệu, tình nguyện viên sẽ nhận tín hiệu từ người điều phối, sau đó thực hiện lần lượt năm hành động theo trình tự đã định sẵn. Sau khi hoàn tất, dữ liệu sẽ được kiểm tra sơ bộ để đảm bảo không có lỗi trong quá trình trước khi lưu trữ và sử dụng cho các bước phân tích tiếp theo.\\
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{image/anh3.jpg}
+    \caption{Vị trí đeo cảm biến}
+    \label{fig:enter-label}
+\end{figure}
+
+ Việc thu dữ liệu bằng cảm biến có thể giúp cho dữ liệu trở nên trực quan và phong phú hơn, không ảnh hưởng đến đối tượng giúp quá trình thu tự nhiên hơn và dễ dàng mở rộng , thu thập được nhiều dữ liệu, đối tượng cùng lúc. Tuy nhiên việc thu thập dữ liệu bằng MPU 6050 cũng có nhiều nhược điểm. Nhiễu và sai số: MPU6050 dễ bị ảnh hưởng bởi nhiễu từ môi trường, đặc biệt là rung động và từ trường xung quanh. Gia tốc kế có thể bị nhiễu do rung động, trong khi con quay hồi chuyển có thể bị lệch dần theo thời gian. Tổng thời gian để thu thập tất cả dữ liệu mất 2 tuần. \\
+
+Tổng số dữ liệu chúng tôi thu được là 114279 mẫu trung bình 19046 mẫu/người.\\
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{image/anh4.jpg}
+    \caption{Dữ liệu sau khi thu thập}
+    \label{fig:enter-label}
+\end{figure}
+
+\section{THỰC NGHIỆM }
+\textbf{A. Thiết bị và hệ thống trong bài toán}\\
+Bài toán sử dụng cảm biến MPU 6050 để thu. Dữ
+liệu cảm biến từ MPU6050 (gia tốc, vận tốc góc)
+chứa nhiều thông tin ẩn về chuyển động phức tạp.
+Để phân biệt chính xác các hoạt động như Đứng,
+Đi bộ, Chạy, Nhảy, Ngồi, Ngã, mô hình cần biểu
+diễn ngữ cảnh chuỗi dữ liệu chi tiết. Sử dụng ESP
+– 32 thu thập dữ liệu từ cảm biến MPU-6050 (cảm
+biến đo gia tốc và con quay hồi chuyển), xử lý dữ
+liệu ban đầu, gửi lên server và hiển thị kết quả
+qua Web Services. Server nhận dữ liệu từ ESP32
+đọc dữ liệu qua giao tiếp I2C, lọc nhiễu cơ bản và
+gửi lên server thông qua WiFi bằng WebSocket.
+Áp dụng model AI để phân loại, nhận diện hoạt
+động dự trên dữ liệu từ MPU-6050, trả kết quả về
+ESP-32.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=8cm, height=4cm]{image/anh1.jpg}
+    \caption{Thiết bị và hệ thống }
+\end{figure}
+
+
+\textbf{B. Mô hình sử dụng}\\
+Cảm biến MPU6050 thu thập dữ liệu gia tốc và vận tốc góc, cung cấp thông tin quan trọng về chuyển động. Tuy nhiên, các hoạt động phức tạp như Đứng, Đi bộ, Chạy, Nhảy, Ngồi, Ngã thường có mẫu dữ liệu ẩn mà các mô hình đơn giản như Random Forest hay LSTM khó khai thác tối ưu.
+
+\textbf{Giải pháp: Sử dụng Transformer để học ngữ cảnh chuỗi dữ liệu}
+
+1. Multi-Head Self-Attention
+Transformer sử dụng Self-Attention để học mối quan hệ giữa các thời điểm khác nhau trong chuỗi dữ liệu:
+\begin{itemize}
+    \item Học mối quan hệ giữa gia tốc \& vận tốc góc theo thời gian.
+    \item Phát hiện tương quan giữa các trục (X, Y, Z) để trích xuất đặc trưng chi tiết.
+    \item Xử lý chuyển động ngắn hạn \& dài hạn trong cùng một mô hình.
+\end{itemize}
+
+2. Feed-Forward Network (FFN)
+\begin{itemize}
+    \item Biến đổi phi tuyến, giúp mô hình phát hiện mẫu phức tạp.
+    \item Làm giàu đặc trưng, giúp phân biệt chính xác giữa các hoạt động có mẫu dữ liệu tương tự (ví dụ: Đi bộ và Chạy).
+\end{itemize}
+
+\textbf{C. Quy trình ứng dụng Transformer để nhận diện hoạt động}\\
+\textbf{Bước 1: Thu thập dữ liệu}
+\begin{itemize}
+    \item ESP32 đọc dữ liệu từ MPU6050, lấy gia tốc \& vận tốc góc theo 3 trục X, Y, Z với tần suất cao (ví dụ: 100Hz).
+\end{itemize}
+
+\textbf{Bước 2: Tiền xử lý dữ liệu}
+\begin{itemize}
+    \item Lọc nhiễu (Sử dụng Kalman Filter, Moving Average).
+    \item Chuẩn hóa dữ liệu (Z-score, Min-Max Scaling).
+    \item Cắt dữ liệu theo cửa sổ thời gian (Sliding Window) để giữ ngữ cảnh.
+\end{itemize}
+
+\textbf{Bước 3: Biểu diễn dữ liệu dưới dạng chuỗi}
+\begin{itemize}
+    \item Dữ liệu được tổ chức theo chuỗi thời gian giống như xử lý ngôn ngữ trong NLP.
+\end{itemize}
+
+\textbf{Bước 4: Huấn luyện mô hình Transformer}
+\begin{itemize}
+    \item Ánh xạ dữ liệu gia tốc \& vận tốc góc thành vector nhúng.
+    \item Sử dụng Multi-Head Self-Attention để học tương quan.
+    \item Dùng Feed-Forward Network để trích xuất đặc trưng nâng cao.
+    \item Mô hình dự đoán hoạt động của người/thiết bị (Đứng, Đi bộ, Chạy, Nhảy, Ngồi, Ngã).
+\end{itemize}
+
+\textbf{Bước 5: Triển khai trên Server/Edge AI}
+\begin{itemize}
+    \item Mô hình có thể chạy trên Cloud Server (GPU/TPU) hoặc Edge AI (Raspberry Pi, Jetson Nano, ESP32-S3) để nhận diện theo thời gian thực.
+    \item Kết quả được gửi về ESP32 để điều khiển thiết bị hoặc hiển thị trên Web Dashboard.
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=4cm, height=8cm]{image/anh2.jpg}
+    \caption{Mô tả mô hình}
+\end{figure}
+
+\textbf{D. Tiền xử lý dữ liệu}\\
+Trực quan hóa dữ liệu MPU6050 bằng t-SNE với ba phương pháp chuẩn hóa
+Dữ liệu từ MPU6050 bao gồm gia tốc và vận tốc góc trên 3 trục (X, Y, Z), giúp phân biệt các hoạt động như \textbf{standing} (đứng), \textbf{sitting} (ngồi), \textbf{walking} (đi bộ), \textbf{jogging} (chạy bộ), \textbf{falling} (ngã), \textbf{jumping} (nhảy).
+
+Tuy nhiên, các hoạt động này có thể có sự chồng lấn trong không gian dữ liệu, vì vậy trực quan hóa bằng \textbf{t-SNE} (t-Distributed Stochastic Neighbor Embedding) giúp:
+\begin{itemize}
+    \item Kiểm tra xem dữ liệu có thể phân tách rõ ràng giữa các hoạt động hay không.
+    \item So sánh ảnh hưởng của các phương pháp tiền xử lý dữ liệu khác nhau.
+    \item Đánh giá khả năng của mô hình AI trong việc phân loại chính xác các hoạt động.
+\end{itemize}
+
+Giới thiệu về t-SNE
+\begin{itemize}
+    \item \textbf{t-SNE} (t-Distributed Stochastic Neighbor Embedding) là một thuật toán giảm chiều dữ liệu từ không gian nhiều chiều (6 chiều của MPU6050) xuống không gian 2D hoặc 3D để dễ dàng trực quan hóa.
+    \item t-SNE giữ nguyên cấu trúc cục bộ của dữ liệu, giúp phân biệt các cụm (clusters) của từng hoạt động.
+    \item Nó sử dụng phân phối xác suất để đo khoảng cách giữa các điểm dữ liệu, giúp biểu diễn sự tương đồng chính xác hơn so với các phương pháp như PCA.
+\end{itemize}
+
+Các phương pháp tiền xử lý dữ liệu
+\begin{enumerate}
+    \item \textbf{No Scaler (Không chuẩn hóa)}: 
+    \begin{itemize}
+        \item Dữ liệu gốc giữ nguyên giá trị đo từ cảm biến.
+        \item Dữ liệu có thể bị lệch do các thang đo khác nhau của gia tốc và vận tốc góc.
+    \end{itemize}
+    
+    \item \textbf{MinMaxScaler}: 
+    \begin{itemize}
+        \item Đưa dữ liệu về khoảng [0,1].
+        \item Giúp t-SNE hoạt động ổn định hơn, tránh ảnh hưởng bởi giá trị lớn nhỏ khác nhau của cảm biến.
+    \end{itemize}
+    
+    \item \textbf{StandardScaler}: 
+    \begin{itemize}
+        \item Chuẩn hóa dữ liệu về trung bình 0, độ lệch chuẩn 1.
+        \item Loại bỏ ảnh hưởng của đơn vị đo, giúp t-SNE phân bố dữ liệu hợp lý hơn.
+    \end{itemize}
+\end{enumerate}
+
+Quy trình trực quan hóa dữ liệu MPU6050 bằng t-SNE \\
+\textbf{Bước 1: Thu thập dữ liệu cảm biến}
+\begin{itemize}
+    \item Đọc dữ liệu từ MPU6050 gồm:
+    \begin{itemize}
+        \item Gia tốc (Acceleration\_X, Acceleration\_Y, Acceleration\_Z).
+        \item Vận tốc góc (Gyroscope\_X, Gyroscope\_Y, Gyroscope\_Z).
+        \item Nhãn hoạt động (Activity\_Label).
+    \end{itemize}
+\end{itemize}
+
+\textbf{Bước 2: Tiền xử lý dữ liệu}
+\begin{itemize}
+    \item Áp dụng ba phương pháp chuẩn hóa \textbf{No Scaler}, \textbf{MinMaxScaler}, \textbf{StandardScaler}.
+    \item Chuyển đổi dữ liệu thành dạng số để t-SNE có thể xử lý.
+\end{itemize}
+
+\textbf{Bước 3: Giảm chiều dữ liệu bằng t-SNE}
+\begin{itemize}
+    \item Áp dụng t-SNE để giảm dữ liệu từ 6 chiều (gia tốc + vận tốc góc) xuống 2 chiều (x, y) để vẽ biểu đồ.
+\end{itemize}
+
+\textbf{Bước 4: Vẽ biểu đồ t-SNE}
+\begin{itemize}
+    \item Mỗi điểm trên biểu đồ tương ứng với một mẫu dữ liệu.
+    \item Màu sắc khác nhau đại diện cho các hoạt động (standing, walking, jogging,...).
+\end{itemize}
+Kết quả mong đợi \\
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=8cm, height=4cm]{image/anh6.jpg}
+     \caption{No Scaler}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=8cm, height=4cm]{image/anh7.jpg}
+    \caption{Minmax Scaler}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=8cm, height=4cm]{image/anh8.jpg}
+    \caption{Standard Scaler}
+\end{figure}
+\section{KẾT QUẢ VÀ THẢO LUẬN}
+
+\textbf{A. Biểu đồ tín hiệu}\\
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=8cm, height=4cm]{image/anh9.jpg}
+\end{figure}
+Biểu đồ tín hiệu gia tốc (\textbf{Accelerometer}) (hàng trên) và con quay hồi chuyển (\textbf{Gyroscope}) (hàng dưới) cho hai hoạt động \textbf{Standing (1)} và \textbf{Sitting (2)}.
+
+\begin{itemize}
+    \item Mỗi đường màu (xanh, hồng, xám, v.v) tương ứng với một trục XXX, YYY, ZZZ của cảm biến.
+    \item Quan sát cho thấy biên độ dao động của gia tốc và vận tốc góc thay đổi tùy theo hoạt động: hoạt động \textbf{Standing} có biên độ ít hơn so với \textbf{Sitting}.
+\end{itemize}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=8cm, height=4cm]{image/anh10.jpg}
+\end{figure}
+Biểu đồ tín hiệu gia tốc (\textbf{Accelerometer}) (hàng trên) và con quay hồi chuyển (\textbf{Gyroscope}) (hàng dưới) cho hai hoạt động \textbf{Jumping (1)} và \textbf{Walking (2)}.
+
+\begin{itemize}
+    \item Mỗi đường màu (xanh, hồng, xám, v.v) tương ứng với một trục XXX, YYY, ZZZ của cảm biến.
+    \item Quan sát cho thấy biên độ dao động của gia tốc và vận tốc góc thay đổi tùy theo hoạt động: hoạt động \textbf{Jumping} có biên độ ít hơn so với \textbf{Walking}.
+\end{itemize}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=8cm, height=4cm]{image/anh11.jpg}
+\end{figure}
+Biểu đồ tín hiệu gia tốc (\textbf{Accelerometer}) (hàng trên) và con quay hồi chuyển (\textbf{Gyroscope}) (hàng dưới) cho hai hoạt động \textbf{Jogging (1)} và \textbf{Falling (2)}.
+
+\begin{itemize}
+    \item Mỗi đường màu xanh, hồng, xám, v.v tương ứng với một trục XXX, YYY, ZZZ của cảm biến.
+    \item Quan sát cho thấy biên độ dao động của gia tốc và vận tốc góc thay đổi tùy theo hoạt động: hoạt động \textbf{Jogging} có biên độ ít hơn so với \textbf{Falling}.
+\end{itemize}
+
+\textbf{B. Ma trận nhầm lẫn}\\
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=8cm, height=4cm]{image/anh12.jpg}
+\end{figure}
+\textbf{Giải thích ma trận nhầm lẫn (Confusion Matrix)}
+\begin{itemize}
+    \item \textbf{Trục dọc (Nhãn thực tế)}: Thể hiện lớp thật (0 đến 5).
+    \item \textbf{Trục ngang (Nhãn dự đoán)}: Thể hiện lớp dự đoán của mô hình (0 đến 5).
+    \item \textbf{Ô $(i, j)$}: Số lượng mẫu có nhãn thực tế là $i$ nhưng được mô hình dự đoán thành $j$.
+    \item \textbf{Đường chéo chính}: Thể hiện số mẫu được dự đoán đúng (nhãn thực tế trùng với nhãn dự đoán).
+    \item \textbf{Màu sắc}: Thể hiện cường độ (số lượng) mẫu. Màu càng đậm thì số mẫu ở ô đó càng nhiều.
+\end{itemize}
+
+\noindent {Quan sát ma trận:}
+\begin{itemize}
+    \item Các ô chéo chính (72, 157, 72, 123, 208, 260) có giá trị cao, cho thấy phần lớn mẫu được phân loại đúng.
+    \item Một vài ô ngoài đường chéo (màu nhạt hơn) thể hiện những trường hợp mô hình bị nhầm lẫn giữa các lớp.
+\end{itemize}
+
+Trong nghiên cứu này, chúng tôi đã triển khai thành công hệ thống nhận diện hành động thời gian thực sử dụng cảm biến MPU 6050. Hệ thống có khả năng phát hiện và phân loại các hành động một cách chính xác trong nhiều điều kiện môi trường khác nhau. Các kết quả thực nghiệm đã cho thấy:
+Độ chính xác nhận diện đạt 93\% nhờ Tranformer. Có khả năng học được mối quan hệ dài hạn giữa các dữ liệu của cảm biến trong 1 khoảng thời gian.
+
+Hệ thống có thể được ứng dụng trong nhiều lĩnh vực như giám sát an ninh, hỗ trợ người khuyết tật, hoặc theo dõi hoạt động trong các môi trường thông minh như lớp học, bệnh viện, nhà xưởng.
+An ninh giám sát: Nhận diện hành vi bất thường như té ngã trong khu vực giám sát.
+Chăm sóc sức khỏe: Giám sát bệnh nhân để phát hiện té ngã hoặc các hành động nguy hiểm.\\
+
+
+Mặc dù đạt được kết quả khả quan, hệ thống vẫn tồn tại một số hạn chế cần khắc phục:
+Sai số khi nhận diện các hành động tương tự nhau: Một số hành động có đặc điểm hoạt động gần giống nhau dẫn đến nhầm lẫn.
+Chưa tích hợp các cảm biến bổ trợ như camera.
+Dữ liệu chưa đa dạng.
+Transformer yêu cầu tài nguyên tính toán cao hơn so với các mô hình truyền thống.
+Bài học rút ra từ nghiên cứu này bao gồm:
+Tăng số lượng dữ liệu thực tế.
+Kết hợp với thị giác máy tính để nâng cao độ chính xác
+Kết hợp nhiều mô hình khác nhau có thể giúp tăng cường độ chính xác và giảm lỗi.\\
+
+\section*{\centering TÀI LIỆU THAM KHẢO}
+
+[1] Redmon, J., Divvala, S., Girshick, R., \& Farhadi, A. (2016). You Only Look Once: Unified, Real-Time Object Detection. arXiv preprint arXiv:1506.02640.\\
+
+[2] Bochkovskiy, A., Wang, C.-Y., \& Liao, H.-Y. M. (2020). YOLOv4: Optimal Speed and Accuracy of Object Detection. arXiv preprint arXiv:2004.10934.\\
+Example of scientific journal paper:\\
+
+[3] Ultralytics. (2023). YOLOv8 Documentation. Retrieved from https://docs.ultralytics.com/\\
+
+[4] Redmon, J., \& Farhadi, A. (2018). YOLOv3: An Incremental Improvement. arXiv preprint arXiv:1804.02767.\\
+
+[5] Taigman, Y., Yang, M., Ranzato, M., \& Wolf, L. (2014). DeepFace: Closing the Gap to Human-Level Performance in Face Verification. Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR).\\
+
+[6] Schroff, F., Kalenichenko, D., \& Philbin, J. (2015). FaceNet: A Unified Embedding for Face Recognition and Clustering. Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR).\\
+
+[7] Deng, J., Guo, J., Xue, N., \& Zafeiriou, S. (2019). ArcFace: Additive Angular Margin Loss for Deep Face Recognition. Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR).
+
+[8] Research on Human Activity Recognition using IMU Sensors.\\
+
+[9] PIR Sensor-based Motion Detection Systems for Smart Homes.\\
+
+[10] Deep Learning-based Human Pose Estimation for Surveillance.\\
+
+[11] mmWave Radar-based Human Motion Detection for Healthcare.\\
+
+[12] Smart Shoe with Pressure Sensors for Gait Analysis.
+
+
+\end{document}
+
+
